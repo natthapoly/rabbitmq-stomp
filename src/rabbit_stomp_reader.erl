@@ -41,9 +41,9 @@
 
 %%----------------------------------------------------------------------------
 
-start_link(SupHelperPid, Ref, Sock, Configuration) ->
+start_link(SupHelperPid, Ref, _Sock, Configuration) ->
     Pid = proc_lib:spawn_link(?MODULE, init,
-                              [[SupHelperPid, Ref, Sock, Configuration]]),
+                              [[SupHelperPid, Ref, Configuration]]),
     {ok, Pid}.
 
 info(Pid, InfoItems) ->
@@ -53,10 +53,11 @@ info(Pid, InfoItems) ->
         UnknownItems -> throw({bad_argument, UnknownItems})
     end.
 
-init([SupHelperPid, Ref, Sock, Configuration]) ->
+init([SupHelperPid, Ref, Configuration]) ->
     process_flag(trap_exit, true),
+    {ok, Sock} = rabbit_networking:handshake(Ref,
+        application:get_env(rabbitmq_stomp, proxy_protocol, false)),
     RealSocket = rabbit_net:unwrap_socket(Sock),
-    rabbit_networking:accept_ack(Ref, RealSocket),
 
     case rabbit_net:connection_string(Sock, inbound) of
         {ok, ConnStr} ->
